@@ -2,72 +2,89 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const socketIO = require('socket.io');
-
-const {generateMessage, validInputs} = require('./utils/message');
+var redis = require('redis');
+const moment = require('moment');
 const {Users} = require('./utils/users');
 
 const publicPath = path.join(__dirname, "/../public");
 const port = process.env.PORT || 3000;
 
 let app = express();
-let server = http.createServer(app);
-let io = socketIO(server);
-let users = new Users();
-
 app.use(express.static(publicPath));
 
+let server = http.createServer(app);
+let io = socketIO(server);
+
+var sub = redis.createClient();
+var pub = redis.createClient();
+sub.subscribe('chat');
+
+let users = new Users();
+
+
 io.on('connection',(socket)=> {
-    
+
+    //join chat 
     socket.on('join',(params, callback)=> {
-        if(!validInputs(params.name) || !validInputs(params.room)){
+        if(!(typeof params.name === 'string' && params.name.trim().length > 0)){
             callback('Name and room are required');
         }
-        
-        //join to specific room
-        socket.join(params.room);
-
-        //remove user from any other room
+     
         users.removeUser(socket.id);
-        users.addUser(socket.id, params.name, params.room);
+        users.addUser(socket.id, params.name);
 
-        //broadcast to room users
-        io.to(params.room).emit('updateUsersList', users.getUserList(params.room));
+        var reply = JSON.stringify({
+            from: 'Admin',
+            text: `${params.name} joined the channel. `,
+            createdAt: moment().valueOf()
+        });
 
-        //welcome message to new user
-        socket.emit('newMessage', generateMessage("Admin",`Welcome to ${params.room}!`));
-
-        //brodcast to everyone in room except the new user
-        socket.broadcast.to(params.room).emit('newMessage', generateMessage("Admin","New user Joined!"));
-
+        //redis publish
+        pub.publish('chat', reply);
         callback();
     })
 
-    //broadcasting to everyone
+    //broadcasting message to everyone
     socket.on('createMessage', (message, callback)=> {
-        
         let user = users.getUser(socket.id);
-
-        if(user && validInputs(message.text)){
-            io.to(user.room).emit('newMessage', generateMessage(user.name,message.text));
+        if(user && (typeof message.text === 'string' && message.text.trim().length > 0)){
+            var reply = JSON.stringify({
+                from: user.name,
+                text: message.text,
+                createdAt: moment().valueOf()
+            });
+            
+            //redis publish
+            pub.publish('chat', reply);
         }
-        
         callback('This is the server');
     });
 
     
-
+    //on disconnect event
     socket.on('disconnect',()=> {
         let user = users.removeUser(socket.id);
-
         if(user){
-            io.to(user.room).emit('updateUsersList', users.getUserList(user.room));
-            io.to(user.room).emit('newMessage',generateMessage('Admin',`${user.name} has left ${user.room} chat room`));
+            var reply = JSON.stringify({
+                from: 'Admin',
+                text: `${user.name} has left chat.`,
+                createdAt: moment().valueOf()
+            });
+            pub.publish('chat', reply);
+      
         }
+    });
+
+
+    //redis subscirbe
+    sub.on('message', function(channel, message) {
+        socket.emit(channel, message);
     });
     
 })
 
 
 server.listen(port, ()=> {
-    console.log(`Listening on port ${port}`);
+    console.log(`Server listening on port ${port}`);
 })
+

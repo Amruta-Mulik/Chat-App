@@ -37,9 +37,12 @@ socket.on('updateUsersList', function (users) {
   usersList.appendChild(ol);
 })
 
-socket.on('newMessage', function(message) {
+socket.on('chat', function(msg) {
+  let message = JSON.parse(msg);
   const formattedTime = moment(message.createdAt).format('LT');
-  const template = document.querySelector('#message-template').innerHTML;
+  const query = message.from == 'Admin' ? '#notification-template' : '#message-template';
+
+  const template = document.querySelector(query).innerHTML;
   const html = Mustache.render(template, {
     from: message.from,
     text: message.text,

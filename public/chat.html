@@ -9,7 +9,7 @@
   <body class="chat">
 
     <div class="chat__sidebar">
-      <h3>People</h3>
+      <h3></h3>
       <div id="users"></div>
     </div>
 
@@ -33,6 +33,14 @@
         </div>
         <div class="message__body">
           <p>{{text}}</p>
+        </div>
+      </li>
+    </script>
+
+    <script id="notification-template" type="text/template">
+      <li class="message">
+        <div style="text-align:center;color:gray;" class="message__body">
+          <p>{{text}}&nbsp;({{createdAt}})</p>
         </div>
       </li>
     </script>

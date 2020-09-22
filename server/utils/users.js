@@ -3,14 +3,13 @@ class Users {
         this.users = [];
     }
 
-    addUser(id,name,room){
-        let user = {id, name, room};
+    addUser(id,name){
+        let user = {id, name};
         this.users.push(user);
     }
 
-    getUserList(room) {
-        let users = this.users.filter((user) => user.room === room);
-        let namesArray = users.map((user) => user.name);
+    getUserList() {
+        let namesArray = this.users.map((user) => user.name);
 
         return namesArray;
     }
