@@ -4,7 +4,7 @@ const express = require('express');
 const socketIO = require('socket.io');
 var redis = require('redis');
 const moment = require('moment');
-const {Users} = require('./utils/users');
+const {Users} = require('./model/users');
 
 const publicPath = path.join(__dirname, "/../public");
 const port = process.env.PORT || 3000;
